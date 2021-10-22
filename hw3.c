@@ -3,6 +3,11 @@
 #include <pthread.h>
 #include <stdlib.h>
 
+int total_balance = 1000000;
+int total_borrow = 0;
+int total_pay = 0;
+int _d = 0;
+
 void enter_region() {
 	asm("	.data\n"
 	"lock:	.byte 0 \n"
@@ -19,20 +24,41 @@ void leave_region() {
 	asm("	movb $0, lock");
 }
 
+void borrow() {
+	int _borrow = rand() % 10000;
+	total_balance -= _borrow;
+	total_borrow += _borrow;
+	_d = _borrow;
+	printf(">>>>>borrow: %d, total_balance: %d\n", _d, total_balance);
+}
+
+void pay() {
+	int _pay = _d;
+	total_balance += _pay;
+	total_pay += _pay;
+	printf("<<<<<payback: %d, total_balance: %d\n", _pay, total_balance);
+}
+
 void critical_region(char *p) {
-	int d = rand() % 1000000;
+	int d = rand() % 10000;
+	if(p == "f1") {
+		borrow();
+	}
+	if(p == "f2") {
+		pay();
+	}
 	printf("%s sleep %d microsecond in critical section\n", p, d);
 	usleep(d);
 }
 
 void noncritical_region(char *p) {
-	int d = rand() % 1000000;
+	int d = rand() % 10000;
 	printf("%s sleep %d microsecond in NON-critical section\n", p, d);
 	usleep(d);
 }
 
 static void* f1(void* p) {
-	for(int i = 0; i < 5; i++) {
+	for(int i = 0; i < 10; i++) {
 		puts("f1 wait for f2");
 		enter_region();
 		printf("f1 start its critical section\n");
@@ -45,7 +71,7 @@ static void* f1(void* p) {
 }
 
 static void* f2(void* p) {
-	for(int i = 0; i < 5; i++) {
+	for(int i = 0; i < 10; i++) {
 		puts("f2 wait for f1");
 		enter_region();
 		printf("f2 start its critical section\n");
@@ -78,6 +104,8 @@ int main() {
 	pthread_join(t2, NULL);
 
 	puts("All threads finished.\n");
+	printf("total_balance: %d, total_borrow : %d, total_pay: %d\n", total_balance, total_borrow, total_pay);
+	printf("total_borrow - total_pay = %d\n", total_borrow - total_pay);
 
 	return 0;
 }
